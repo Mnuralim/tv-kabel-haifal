@@ -421,12 +421,12 @@ export const RegisterForm = () => {
           ))}
 
           {renderStepContent()}
-          <div className="flex justify-between mt-8">
+          <div className="flex justify-between mt-8 gap-x-3">
             <button
               type="button"
               onClick={prevStep}
               disabled={currentStep === 1}
-              className={`flex items-center gap-2 px-6 py-3 rounded-md border-2 border-black font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
+              className={`flex items-center gap-2 px-3 py-3 rounded-md border-2 border-black font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
                 currentStep === 1
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                   : "bg-white text-gray-700 hover:bg-gray-50"
@@ -441,7 +441,7 @@ export const RegisterForm = () => {
                 type="button"
                 onClick={nextStep}
                 disabled={!isStepValid(currentStep)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-md border-2 border-black font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
+                className={`flex items-center gap-2 px-3 py-3 rounded-md border-2 border-black font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
                   !isStepValid(currentStep)
                     ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                     : "bg-red-500 text-white hover:bg-red-600"

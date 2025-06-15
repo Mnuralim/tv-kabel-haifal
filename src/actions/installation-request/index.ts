@@ -157,7 +157,7 @@ export async function createInstallationRequest(
   }
 
   revalidatePath("/installations");
-  revalidatePath("/admin/installation-request");
+  revalidatePath("/admin/installation-request", "layout");
   redirect("/installations");
 }
 
