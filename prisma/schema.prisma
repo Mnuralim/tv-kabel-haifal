@@ -1,0 +1,284 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id              String          @id @default(uuid()) @map("id")
+  username        String
+  password        String
+  role            Role            @default(CUSTOMER)
+  lastLogin       DateTime?       @map("last_login") @db.Timestamptz
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt       DateTime?       @map("deleted_at") @db.Timestamptz
+  isActive        Boolean         @default(true) @map("is_active")
+  customerDetails CustomerDetail?
+  adminDetails    AdminDetail?
+
+  @@unique([username, isActive], map: "unique_active_username")
+  @@map("users")
+}
+
+model CustomerDetail {
+  id                    String                 @id @default(uuid()) @map("id")
+  userId                String                 @unique @map("user_id")
+  fullName              String                 @map("full_name")
+  address               String
+  phoneNumber           String                 @map("phone_number")
+  email                 String
+  idCardNumber          String                 @map("id_card_number")
+  familyCardNumber      String                 @map("family_card_number")
+  birthDate             DateTime               @map("birth_date") @db.Date
+  birthPlace            String                 @map("birth_place")
+  status                CustomerStatus         @default(ACTIVE)
+  registrationDate      DateTime?              @map("registration_date") @db.Date
+  subscriptionStartDate DateTime?              @map("subscription_start_date") @db.Date
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt             DateTime?              @map("deleted_at") @db.Timestamptz
+  isActive              Boolean                @default(true) @map("is_active")
+  user                  User                   @relation(fields: [userId], references: [id])
+  bills                 Bill[]
+  complaints            Complaint[]
+  InstallationRequest   InstallationRequest?
+  CustomerNotification  CustomerNotification[]
+
+  @@map("customer_details")
+}
+
+model AdminDetail {
+  id                  String                @id @default(uuid()) @map("id")
+  userId              String                @unique @map("user_id")
+  adminName           String                @map("admin_name")
+  level               AdminLevel            @default(ADMIN)
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  user                User                  @relation(fields: [userId], references: [id])
+  deletedAt           DateTime?             @map("deleted_at") @db.Timestamptz
+  isActive            Boolean               @default(true) @map("is_active")
+  payments            Payment[]
+  transactionReports  TransactionReport[]
+  InstallationRequest InstallationRequest[]
+
+  @@map("admin_details")
+}
+
+model Bill {
+  id            String         @id @default(uuid()) @map("id")
+  customerId    String         @map("customer_id")
+  month         Int
+  year          Int
+  amount        Float
+  paymentStatus PaymentStatus  @default(UNPAID) @map("payment_status")
+  dueDate       DateTime       @map("due_date") @db.Date
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  customer      CustomerDetail @relation(fields: [customerId], references: [id])
+  payment       Payment?
+  verifiedAt    DateTime?      @map("verified_at") @db.Timestamptz
+  receipt       String?
+  deletedAt     DateTime?      @map("deleted_at") @db.Timestamptz
+  isActive      Boolean        @default(true) @map("is_active")
+
+  @@unique([customerId, month, year])
+  @@map("bills")
+}
+
+model Payment {
+  id           String       @id @default(uuid()) @map("id")
+  billId       String       @unique @map("bill_id")
+  adminId      String?      @map("admin_id")
+  paymentProof String?      @map("payment_proof")
+  uploadDate   DateTime     @map("upload_date") @db.Date
+  paymentDate  DateTime     @map("payment_date") @db.Date
+  notes        String?
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt    DateTime?    @map("deleted_at") @db.Timestamptz
+  isActive     Boolean      @default(true) @map("is_active")
+  bill         Bill         @relation(fields: [billId], references: [id])
+  admin        AdminDetail? @relation(fields: [adminId], references: [id])
+
+  @@map("payments")
+}
+
+model Complaint {
+  id              String            @id @default(uuid()) @map("id")
+  customerId      String            @map("customer_id")
+  category        ComplaintCategory
+  title           String
+  description     String
+  image           String?
+  complaintStatus ComplaintStatus   @default(OPEN) @map("complaint_status")
+  adminResponse   String?           @map("admin_response")
+  completionDate  DateTime?         @map("completion_date") @db.Date
+  deletedAt       DateTime?         @map("deleted_at") @db.Timestamptz
+  isActive        Boolean           @default(true) @map("is_active")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  customer        CustomerDetail    @relation(fields: [customerId], references: [id])
+
+  @@map("complaints")
+}
+
+model TransactionReport {
+  id               String      @id @default(uuid()) @map("id")
+  adminId          String      @map("admin_id")
+  month            Int
+  year             Int
+  totalRevenue     Float       @map("total_revenue")
+  transactionCount Int         @map("transaction_count")
+  notes            String?
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt        DateTime?   @map("deleted_at") @db.Timestamptz
+  isActive         Boolean     @default(true) @map("is_active")
+  admin            AdminDetail @relation(fields: [adminId], references: [id])
+
+  @@unique([month, year])
+  @@map("transaction_reports")
+}
+
+model InstallationRequest {
+  id                  String             @id @default(uuid()) @map("id")
+  customerId          String             @unique @map("customer_id")
+  adminId             String?            @map("admin_id")
+  installationAddress String             @map("installation_address")
+  notes               String?
+  status              InstallationStatus @default(PENDING)
+  scheduledDate       DateTime?          @map("scheduled_date") @db.Date
+  completionDate      DateTime?          @map("completion_date") @db.Date
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  customer            CustomerDetail     @relation(fields: [customerId], references: [id])
+  admin               AdminDetail?       @relation(fields: [adminId], references: [id])
+  approvedDate        DateTime?          @map("approved_date") @db.Date
+  rejectedDate        DateTime?          @map("rejected_date") @db.Date
+  deletedAt           DateTime?          @map("deleted_at") @db.Timestamptz
+  isActive            Boolean            @default(true) @map("is_active")
+
+  @@map("installation_requests")
+}
+
+model CompanySettings {
+  id            String    @id @default(uuid()) @map("id")
+  name          String    @map("name")
+  address       String    @map("address")
+  phoneNumber   String    @map("phone_number")
+  email         String    @map("email")
+  website       String    @map("website")
+  logo          String    @map("logo")
+  aboutUs       String?   @map("about_us")
+  montyhlyRate  Float     @default(100000) @map("monthly_rate")
+  billingDate   Int       @default(26) @map("billing_date")
+  description   String?
+  bankName      String?   @map("bank_name")
+  accountName   String?   @map("account_name")
+  accountNumber String?   @map("account_number")
+  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+  isActive      Boolean   @default(true) @map("is_active")
+
+  @@map("company_settings")
+}
+
+model AdminNotification {
+  id          String                @id @default(uuid())
+  type        AdminNotificationType
+  title       String
+  message     String
+  redirectTo  String?               @map("redirect_to")
+  relatedType String?               @map("related_type")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  readAt      DateTime?             @map("read_at")
+  isRead      Boolean               @default(false) @map("is_read")
+  deletedAt   DateTime?             @map("deleted_at") @db.Timestamptz
+  isActive    Boolean               @default(true) @map("is_active")
+
+  @@map("admin_notifications")
+}
+
+model CustomerNotification {
+  id          String                   @id @default(uuid())
+  customerId  String                   @map("customer_id")
+  type        CustomerNotificationType
+  title       String
+  message     String
+  isRead      Boolean                  @default(false) @map("is_read")
+  redirectTo  String?                  @map("redirect_to")
+  relatedType String?                  @map("related_type")
+  createdAt   DateTime                 @default(now()) @map("created_at")
+  readAt      DateTime?                @map("read_at")
+  deletedAt   DateTime?                @map("deleted_at") @db.Timestamptz
+  isActive    Boolean                  @default(true) @map("is_active")
+  customer    CustomerDetail           @relation(fields: [customerId], references: [id])
+
+  @@map("customer_notifications")
+}
+
+enum AdminNotificationType {
+  NEW_PAYMENT
+  NEW_COMPLAINT
+  INSTALLATION_REQUEST
+  USER_ACTIVATION_REQUEST
+}
+
+enum CustomerNotificationType {
+  BILL_DUE
+  PAYMENT_CONFIRMED
+  COMPLAINT_UPDATE
+  INSTALLATION_SCHEDULED
+  SERVICE_ANNOUNCEMENT
+}
+
+enum InstallationStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  REJECTED
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum AdminLevel {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum PaymentStatus {
+  PAID
+  IN_REVIEW
+  UNPAID
+  REJECTED
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ComplaintCategory {
+  VIDEO_ISSUE
+  AUDIO_ISSUE
+  CHANNEL_ISSUE
+  BILLING_ISSUE
+  INSTALLATION
+  SERVICE_STAFF
+  OTHERS
+}
