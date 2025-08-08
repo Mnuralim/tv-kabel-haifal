@@ -37,8 +37,8 @@ async function createAdmin() {
 
 async function createSettings() {
   const setting = {
-    name: "TV Kabel Haikal",
-    address: "Jl. Mawar No. 123, Kendari, Sulawesi Tenggara",
+    name: "TV Kabel Haifal",
+    address: "Jl. Mawar No. 123, Buton Tengah, Sulawesi Tenggara",
     phoneNumber: "(021) 1234-5678",
     email: "info@tvkabelhaikal.com",
     website: "www.tvkabelhaikal.com",
