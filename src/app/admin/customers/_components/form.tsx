@@ -62,7 +62,6 @@ export const CustomerForm = ({ modal, selectedCustomer, onClose }: Props) => {
               placeholder="Masukkan password"
               maxLength={6}
               className="w-full px-4 py-3 border-3 border-neutral-300 rounded-none focus:outline-none focus:ring-0 focus:border-red-600 shadow-[3px_3px_0px_0px_rgba(230,230,230,1)] bg-white text-neutral-800"
-              required
             />
           </div>
         )}
