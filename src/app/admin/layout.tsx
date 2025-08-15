@@ -44,7 +44,7 @@ export default async function RootLayout({
       >
         {!isLoginPage && (
           <Navbar
-            notificationCount={notificationCount}
+            notificationCount={notificationCount || 0}
             username={admin?.username}
           />
         )}

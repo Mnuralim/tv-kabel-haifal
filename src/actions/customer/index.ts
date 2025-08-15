@@ -187,6 +187,7 @@ export async function createCustomer(
 
   revalidatePath("/admin/customers");
   revalidatePath("/admin/bills");
+  revalidatePath("/admin");
 
   const redirectPath =
     formData.get("password") && formData.get("confirmPassword")
@@ -299,6 +300,7 @@ export async function updateCustomer(
   revalidatePath("/admin/customers", "layout");
   revalidatePath("/profile");
   revalidatePath("/dashboard");
+  revalidatePath("/admin");
 
   const redirectPath = shouldRedirectToAdmin ? "/admin/customers" : "/profile";
   redirect(redirectPath);
@@ -395,6 +397,7 @@ export async function deleteCustomer(id: string) {
   });
 
   revalidatePath("/admin/customers", "layout");
+  revalidatePath("/admin");
   redirect("/admin/customers");
 }
 
@@ -414,6 +417,7 @@ export async function handleCustomerStatus(status: CustomerStatus, id: string) {
 
   revalidatePath("/admin/customers", "layout");
   revalidatePath("/profile");
+  revalidatePath("/admin");
   revalidatePath("/dashboard");
 }
 
