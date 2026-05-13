@@ -110,68 +110,55 @@ export const getBillById = unstable_cache(async function getBillById(
   });
 });
 
-export async function createBill(
+export async function createBulkBill(
   prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
   try {
-    const customerId = formData.get("customerId") as string;
     const month = formData.get("month") as string;
     const year = formData.get("year") as string;
 
-    if (!customerId || !month || !year) {
-      return {
-        error: "Customer, bulan, dan tahun harus diisi.",
-      };
+    if (!month || !year) {
+      return { error: "Bulan dan tahun harus diisi." };
     }
 
-    const existingCustomer = await prisma.customerDetail.findUnique({
+    const activeCustomers = await prisma.customerDetail.findMany({
       where: {
-        id: customerId,
         isActive: true,
+        status: "ACTIVE",
+        subscriptionStartDate: { not: null },
       },
     });
 
-    if (!existingCustomer) {
-      return {
-        error: "Pelanggan tidak ditemukan.",
-      };
-    }
-
-    if (existingCustomer.status !== "ACTIVE") {
-      return {
-        error: "Pelanggan tidak aktif.",
-      };
-    }
-
-    if (!existingCustomer.subscriptionStartDate) {
-      return {
-        error: "Pelanggan belum berlangganan.",
-      };
-    }
-
-    const existingBill = await prisma.bill.findUnique({
-      where: {
-        customerId_month_year: {
-          customerId: existingCustomer.id,
-          month: Number(month),
-          year: Number(year),
-        },
-      },
-    });
-
-    if (existingBill) {
-      return {
-        error:
-          "Tagihan untuk pelanggan ini pada bulan dan tahun tersebut sudah ada.",
-      };
+    if (activeCustomers.length === 0) {
+      return { error: "Tidak ada pelanggan aktif yang ditemukan." };
     }
 
     const setting = await prisma.companySettings.findFirst();
-
     if (!setting) {
+      return { error: "Pengaturan perusahaan tidak ditemukan." };
+    }
+
+    const existingBills = await prisma.bill.findMany({
+      where: {
+        month: Number(month),
+        year: Number(year),
+        customerId: { in: activeCustomers.map((c) => c.id) },
+        isActive: true,
+      },
+      select: { customerId: true },
+    });
+
+    const alreadyBilledIds = new Set(existingBills.map((b) => b.customerId));
+    const customersTooBill = activeCustomers.filter(
+      (c) => !alreadyBilledIds.has(c.id)
+    );
+
+    if (customersTooBill.length === 0) {
       return {
-        error: "Pengaturan perusahaan tidak ditemukan.",
+        error: `Semua pelanggan aktif sudah memiliki tagihan untuk bulan ${getMonthName(
+          Number(month)
+        )} ${year}.`,
       };
     }
 
@@ -180,40 +167,58 @@ export async function createBill(
       Number(month) - 1,
       setting.billingDate
     );
-
     const currentDate = new Date();
     if (dueDate < currentDate) {
       dueDate.setMonth(dueDate.getMonth() + 1);
     }
 
-    const billCreated = await prisma.bill.create({
-      data: {
-        customerId: existingCustomer.id,
+    const billsData = customersTooBill.map((customer) => ({
+      customerId: customer.id,
+      month: Number(month),
+      year: Number(year),
+      dueDate,
+      paymentStatus: "UNPAID" as const,
+      amount: setting.montyhlyRate,
+    }));
+
+    await prisma.bill.createMany({ data: billsData });
+
+    const createdBills = await prisma.bill.findMany({
+      where: {
         month: Number(month),
         year: Number(year),
-        dueDate: dueDate,
-        paymentStatus: "UNPAID",
-        amount: setting.montyhlyRate,
+        customerId: { in: customersTooBill.map((c) => c.id) },
+        isActive: true,
       },
+      select: { id: true, customerId: true },
     });
 
-    await createCustomerNotification(
-      existingCustomer.id,
-      "BILL_DUE",
-      "Tagihan Jatuh Tempo",
-      `Tagihan bulan ${getMonthName(
-        Number(month)
-      )} ${year} akan jatuh tempo pada tanggal ${formatDate(
-        dueDate.toString()
-      )}, harap segera membayar tagihan ini.`,
-      `/bills/${billCreated.id}`
+    // Kirim notifikasi ke masing-masing pelanggan
+    await Promise.all(
+      createdBills.map((bill) =>
+        createCustomerNotification(
+          bill.customerId,
+          "BILL_DUE",
+          "Tagihan Jatuh Tempo",
+          `Tagihan bulan ${getMonthName(
+            Number(month)
+          )} ${year} akan jatuh tempo pada tanggal ${formatDate(
+            dueDate.toString()
+          )}, harap segera membayar tagihan ini.`,
+          `/bills/${bill.id}`
+        )
+      )
+    );
+
+    // Kembalikan info sukses (bisa pakai toast di sisi klien)
+    console.log(
+      `Berhasil membuat ${createdBills.length} tagihan, ${alreadyBilledIds.size} dilewati (sudah ada).`
     );
   } catch (error) {
-    console.error("Error creating bill:", error);
-    return {
-      error: "Terjadi kesalahan saat membuat tagihan.",
-    };
+    console.error("Error creating bulk bills:", error);
+    return { error: "Terjadi kesalahan saat membuat tagihan massal." };
   }
+
   revalidatePath("/bills", "layout");
   revalidatePath("/admin/bills", "layout");
   revalidatePath("/admin");

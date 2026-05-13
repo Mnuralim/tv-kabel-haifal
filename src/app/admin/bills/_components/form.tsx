@@ -1,39 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { ErrorMessage } from "../../_components/error-message";
 import { useActionState } from "react";
 import { SubmitButton } from "./submit-button";
-import { createBill, updateBill } from "@/actions/bill";
+import { createBulkBill, updateBill } from "@/actions/bill";
 import type { BillInfo } from "./bill-list";
-import type { CustomerInfo } from "../../customers/_components/customer-list";
 
 interface Props {
   modal?: "add" | "edit";
   selectedBill?: BillInfo | null;
-  customers?: CustomerInfo[];
   onClose: () => void;
 }
 
-export const BillForm = ({
-  modal,
-  selectedBill,
-  customers = [],
-  onClose,
-}: Props) => {
+export const BillForm = ({ modal, selectedBill, onClose }: Props) => {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
-  const [createState, createAction] = useActionState(createBill, {
+  const [createState, createAction] = useActionState(createBulkBill, {
     error: null,
   });
   const [updateState, updateAction] = useActionState(updateBill, {
     error: null,
   });
-
-  const [selectedCustomer, setSelectedCustomer] = useState<string>(
-    selectedBill?.customerId || ""
-  );
 
   const months = [
     { value: 1, label: "Januari" },
@@ -53,48 +42,45 @@ export const BillForm = ({
   return (
     <>
       <h2 className="text-2xl md:text-3xl font-black mb-6 border-b-4 border-red-500 pb-2 text-neutral-800">
-        {modal === "add" ? "Tambah Tagihan" : "Edit Tagihan"}
+        {modal === "add" ? "Buat Tagihan Massal" : "Edit Tagihan"}
       </h2>
+
       <form
         className="overflow-y-auto max-h-[calc(100vh-200px)]"
         action={modal === "add" ? createAction : updateAction}
       >
-        {modal === "edit" && (
-          <input type={"hidden"} name="customerId" value={selectedCustomer} />
-        )}
         <input type="hidden" name="id" defaultValue={selectedBill?.id} />
+
         {createState.error || updateState.error ? (
           <ErrorMessage message={createState.error || updateState.error} />
         ) : null}
 
-        <div className="mb-5">
-          <label className="block text-neutral-800 mb-2 font-bold">
-            Pelanggan
-          </label>
-          <select
-            name="customerId"
-            value={selectedCustomer}
-            onChange={(e) => setSelectedCustomer(e.target.value)}
-            className="w-full px-4 py-3 border-3 border-neutral-300 rounded-none focus:outline-none focus:ring-0 focus:border-red-600 shadow-[3px_3px_0px_0px_rgba(230,230,230,1)] bg-white text-neutral-800"
-            required
-            disabled={modal === "edit"}
-            defaultValue={selectedCustomer || ""}
-          >
-            <option value="">Pilih Pelanggan</option>
-            {customers
-              .filter(
-                (customer) => customer.customerDetails?.status === "ACTIVE"
-              )
-              .map((customer) => (
-                <option
-                  key={customer.customerDetails?.id}
-                  value={customer.customerDetails?.id}
-                >
-                  {customer.customerDetails?.fullName || customer.username}
-                </option>
-              ))}
-          </select>
-        </div>
+        {modal === "add" && (
+          <div className="mb-5 px-4 py-3 bg-blue-50 border-l-4 border-blue-500 text-blue-800 text-sm font-medium">
+            Tagihan akan dibuat secara otomatis untuk{" "}
+            <span className="font-bold">semua pelanggan aktif</span> yang belum
+            memiliki tagihan di bulan dan tahun yang dipilih.
+          </div>
+        )}
+
+        {modal === "edit" && (
+          <div className="mb-5">
+            <label className="block text-neutral-800 mb-2 font-bold">
+              Pelanggan
+            </label>
+            <input
+              type="text"
+              value={selectedBill?.customer.fullName ?? ""}
+              disabled
+              className="w-full px-4 py-3 border-3 border-neutral-300 rounded-none bg-neutral-100 text-neutral-500 shadow-[3px_3px_0px_0px_rgba(230,230,230,1)]"
+            />
+            <input
+              type="hidden"
+              name="customerId"
+              value={selectedBill?.customerId}
+            />
+          </div>
+        )}
 
         <div className="mb-5">
           <label className="block text-neutral-800 mb-2 font-bold">Bulan</label>
