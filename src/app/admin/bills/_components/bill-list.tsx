@@ -179,7 +179,6 @@ export const BillList = ({ bills, modal, customers, pagination }: Props) => {
         <BillForm
           selectedBill={selectedBill}
           modal={modal}
-          customers={customers}
           onClose={handleCloseModal}
         />
       </Modal>
